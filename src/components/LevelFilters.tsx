@@ -1,8 +1,7 @@
 import React from 'react';
 import { ChevronDown, Check, GitCompare } from 'lucide-react';
 import { Level } from '../types';
-import { SetOperationsModal } from './SetOperations';
-import { performSetOperation } from '../lib/setOperations';
+import { SetOperationsModal } from './SetOperations'; 
 
 interface LevelFiltersProps {
   currentLevel: number;
@@ -15,6 +14,8 @@ interface LevelFiltersProps {
   filteredLevelItems: Record<number, Level[]>;
   selectedLevelItems: Record<number, string[]>;
   onLevelItemsChange: (level: number, items: string[]) => void;
+  selectedOperation: 'union' | 'intersection' | 'difference' | null;
+  onOperationChange: (operation: 'union' | 'intersection' | 'difference' | null) => void;
 }
 
 export function LevelFilters({
@@ -28,11 +29,12 @@ export function LevelFilters({
   filteredLevelItems,
   selectedLevelItems,
   onLevelItemsChange,
+  selectedOperation,
+  onOperationChange,
 }: LevelFiltersProps) {
   const [openLevels, setOpenLevels] = React.useState<Record<number, boolean>>({});
   const levelRefs = React.useRef<Record<number, HTMLButtonElement | null>>({});
   const [showSetOperations, setShowSetOperations] = React.useState(false);
-  const [selectedOperation, setSelectedOperation] = React.useState<'union' | 'intersection' | 'difference' | null>(null);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -173,7 +175,7 @@ export function LevelFilters({
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-coral-600 hover:bg-coral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-coral-500"
         >
           <GitCompare className="w-4 h-4 mr-2" />
-          Set Operations
+          {selectedOperation ? `${selectedOperation} active` : 'Set Operations'}
         </button>
       </div>
 
@@ -181,7 +183,7 @@ export function LevelFilters({
         isOpen={showSetOperations}
         onClose={() => setShowSetOperations(false)}
         selectedOperation={selectedOperation}
-        onOperationChange={setSelectedOperation}
+        onOperationChange={onOperationChange}
       />
     </div>
   );

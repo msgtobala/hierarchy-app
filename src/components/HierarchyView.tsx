@@ -34,7 +34,7 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
   const [editingLevel, setEditingLevel] = useState<GroupedLevel | null>(null);
   const [levelRelationships, setLevelRelationships] = useState<Record<string, string[]>>({});
   const [availableParents, setAvailableParents] = useState<Level[]>([]);
-  const [selectedOperation, setSelectedOperation] = useState<'union' | 'intersection' | 'difference' | null>(null);
+  const [selectedOperation, setSelectedOperation] = useState<'union' | 'intersection' | 'difference' | null>(null); 
 
   const isMaxLevel = useMemo(() => currentLevel === maxLevel, [currentLevel, maxLevel]);
 
@@ -272,16 +272,21 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
       levelItems[currentLevel]?.find(item => item.id === id)?.name || ''
     ).filter(Boolean);
     
-    // Apply set operations if we have selected names and an operation
-    if (selectedOperation && selectedNames.length > 0) {
-      filtered = filtered.filter(level => {
-        const parentNames = level.parents.map(p => p.name);
-        console.log(`\nFiltering item: ${level.name}`);
-        const result = performSetOperation(selectedOperation, selectedNames, parentNames, true); 
-        return result;
+    // Get all items at the current level
+    filtered = groupedLevels;
+    
+    // Only apply set operations if we have selected items and an operation
+    if (selectedOperation && selectedIds.length > 0) {
+      const selectedParentNames = selectedIds.map(id => 
+        levelItems[currentLevel]?.find(item => item.id === id)?.name || ''
+      ).filter(Boolean);
+      
+      filtered = groupedLevels.filter(level => {
+        const levelParentNames = level.parents.map(p => p.name);
+        return performSetOperation(selectedOperation, selectedParentNames, levelParentNames);
       });
     } else if (selectedIds.length > 0) {
-      // Default behavior without set operation - show items with any selected parent
+      // Default behavior - show items with any selected parent
       filtered = filtered.filter(level =>
         level.parents.some(parent => selectedIds.includes(parent.id))
       );
