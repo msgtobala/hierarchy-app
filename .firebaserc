@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "hierarchy-app-960f8"
+  },
+  "targets": {
+    "hierarchy-app-960f8": {
+      "hosting": {
+        "hierarchy-app": [
+          "hierarchy-app"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
