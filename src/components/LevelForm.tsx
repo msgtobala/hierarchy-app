@@ -3,6 +3,7 @@ import { addDoc, collection, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { FileInput } from './FileInput';
 import { Level } from '../types';
+import { MultiSelect } from './MultiSelect';
 import { useLevelData } from '../hooks/useLevelData';
 import { findExistingLevel } from '../lib/levelUtils';
 
@@ -69,26 +70,13 @@ export function LevelForm({ level }: LevelFormProps) {
       <FileInput label="Upload Icon" required />
 
       {level > 1 && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            L{level - 1} Levels
-          </label>
-          <select
-            multiple
-            value={selectedParents}
-            onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions, option => option.value);
-              setSelectedParents(selected);
-            }}
-            className="mt-1 block w-full rounded-md border-coral-300 shadow-sm focus:border-coral-500 focus:ring-coral-500"
-          >
-            {parentLevels.map((parent) => (
-              <option key={`parent-${parent.id}`} value={parent.id}>
-                {parent.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <MultiSelect
+          label={`L${level - 1} Levels`}
+          options={parentLevels}
+          value={selectedParents}
+          onChange={setSelectedParents}
+          required
+        />
       )}
 
       <button
