@@ -13,6 +13,11 @@ interface MultiSelectProps {
 export function MultiSelect({ options, value, onChange, label, required }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState({
+    top: 0,
+    left: 0,
+    width: 'auto'
+  });
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -24,6 +29,19 @@ export function MultiSelect({ options, value, onChange, label, required }: Multi
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+  
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      
+      setDropdownStyle({
+        top: rect.bottom + scrollTop,
+        left: rect.left,
+        width: rect.width
+      });
+    }
+  }, [isOpen]);
 
   const handleToggleOption = (optionId: string) => {
     const newValue = value.includes(optionId)
@@ -60,13 +78,15 @@ export function MultiSelect({ options, value, onChange, label, required }: Multi
       </button>
 
       {isOpen && (
-        <div className="fixed z-[100] mt-1 w-[inherit] rounded-md bg-white shadow-lg border border-gray-200" style={{
+        <div 
+          className="fixed z-[100] rounded-md bg-white shadow-lg border border-gray-200"
+          style={{
           maxHeight: '300px', 
           overflowY: 'auto',
-          top: containerRef.current?.getBoundingClientRect().bottom ?? 0,
-          left: containerRef.current?.getBoundingClientRect().left ?? 0,
-          width: containerRef.current?.getBoundingClientRect().width ?? 'auto'
-        }}>
+          ...dropdownStyle,
+          marginTop: '4px'
+        }}
+        >
           <div className="py-1">
             {options.map((option) => (
               <div
