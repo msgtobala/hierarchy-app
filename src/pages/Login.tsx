@@ -19,8 +19,10 @@ export function Login() {
     try {
       await login(email, password);
       navigate('/');
-    } catch (error) {
-      setError('Invalid email or password');
+    } catch (error: any) {
+      setError(error.message === 'Access denied. Only admin can login.' 
+        ? error.message 
+        : 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
