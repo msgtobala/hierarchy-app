@@ -5,11 +5,17 @@
   "targets": {
     "hierarchy-app-960f8": {
       "hosting": {
-        "hierarchy-app": [
-          "hierarchy-app"
+        "hierarchy-app-dev": [
+          "hierarchy-app-dev"
+        ]
+      }
+    },
+    "hierarchy-app2": {
+      "hosting": {
+        "hierarchy-app-uat": [
+          "hierarchy-app-uat"
         ]
       }
     }
-  },
-  "etags": {}
+  }
 }
