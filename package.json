@@ -4,18 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "lint": "eslint .",
-    "preview": "vite preview", 
-    "dev": "vite --mode development",
-    "uat": "vite --mode uat",
-    "prod": "vite --mode production",
+    "dev": "vite",
     "build": "vite build",
-    "build:dev": "vite build --mode development",
-    "build:uat": "vite build --mode uat",
-    "build:prod": "vite build --mode production",
-    "serve:prod": "vite preview --mode production",
-    "deploy:dev": "firebase use hierarchy-app-960f8 && npm run build:dev && firebase deploy --only hosting:hierarchy-app-dev",
-    "deploy:uat": "firebase use hierarchy-app2 && npm run build:uat && firebase deploy --only hosting:hierarchy-app-uat"
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",
