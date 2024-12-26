@@ -2,6 +2,11 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
 import { AddLevel } from './pages/AddLevel';
 import { ViewLevels } from './pages/ViewLevels';
+import { Login } from './pages/Login';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { auth, logout } from './lib/auth';
+import { LogOut } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
 
 const getLinkClassName = ({ isActive }: { isActive: boolean }) => {
   return `border-transparent hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
@@ -12,10 +17,20 @@ const getLinkClassName = ({ isActive }: { isActive: boolean }) => {
 };
 
 function App() {
+  const { user } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
   return (
     <Router>
       <div className="min-h-screen bg-gray-100">
-        <nav className="bg-white shadow-sm">
+        {user && <nav className="bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
               <div className="flex">
@@ -37,14 +52,32 @@ function App() {
                   </NavLink>
                 </div>
               </div>
+              <div className="flex items-center">
+                <button
+                  onClick={handleLogout}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-full text-sm font-medium text-white bg-[rgb(255,127,80)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(255,127,80)] shadow-sm"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
-        </nav>
+        </nav>}
 
-        <div className="py-10">
+        <div className={user ? "py-10" : ""}>
           <Routes>
-            <Route path="/" element={<AddLevel />} />
-            <Route path="/view" element={<ViewLevels />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <AddLevel />
+              </ProtectedRoute>
+            } />
+            <Route path="/view" element={
+              <ProtectedRoute>
+                <ViewLevels />
+              </ProtectedRoute>
+            } />
           </Routes>
         </div>
       </div>
