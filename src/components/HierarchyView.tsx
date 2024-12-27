@@ -394,9 +394,21 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
           filteredLevels.map((level) => (
             <div key={level.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center space-x-3 mb-4">
-                <div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
-                  <Bot className="w-5 h-5 text-gray-600" />
-                </div>
+                {level.image ? (
+                  <img 
+                    src={level.image} 
+                    alt={level.name}
+                    className="w-8 h-8 object-cover rounded-full"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0xMiAyMmM1LjUyMyAwIDEwLTQuNDc3IDEwLTEwUzE3LjUyMyAyIDEyIDIgMiA2LjQ3NyAyIDEyczQuNDc3IDEwIDEwIDEweiIvPjxwYXRoIGQ9Ik0xMiAxNmEzIDMgMCAxIDAgMC02IDMgMyAwIDAgMCAwIDZ6Ii8+PC9zdmc+';
+                    }}
+                  />
+                ) : (
+                  <div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
+                    <Bot className="w-5 h-5 text-gray-600" />
+                  </div>
+                )}
                 <div>
                   <h3 className="font-medium">{level.name}</h3>
                   <p className="text-sm text-gray-500">Level {currentLevel + 1}</p>
@@ -405,7 +417,7 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
               
               <div className="flex flex-wrap gap-2 mt-3">
                 {level.parents.map((parent) => (
-                  <div key={parent.id} className="inline-flex items-center px-3 py-1 bg-coral-100 text-coral-800 rounded-full">
+                  <div key={parent.id} className="inline-flex items-center px-3 py-1 bg-[rgb(255,127,80)] text-white rounded-full">
                     <span className="text-sm font-medium">{parent.name}</span>
                   </div>
                 ))}
