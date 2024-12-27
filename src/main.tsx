@@ -5,9 +5,9 @@ import { AuthProvider } from './contexts/AuthContext';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <AuthProvider>
+  // <StrictMode>
+  <AuthProvider>
     <App />
-    </AuthProvider>
-  </StrictMode>
+  </AuthProvider>
+  // </StrictMode>
 );

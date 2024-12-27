@@ -4,9 +4,10 @@
     "build": "tsc",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",
-    "shell": "npm run build && firebase functions:shell",
+    "shell": "npm run build",
     "start": "npm run shell",
-    "deploy": "firebase deploy --only functions",
+    "deploy:dev": "npm run build && firebase use hierarchy-app-960f8 && firebase deploy --only functions",
+    "deploy:uat": "npm run build && firebase use hierarchy-app2 && firebase deploy --only functions",
     "logs": "firebase functions:log"
   },
   "engines": {
