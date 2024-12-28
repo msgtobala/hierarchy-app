@@ -2,7 +2,7 @@ import * as functions from 'firebase-functions';
 import OpenAI from 'openai';
 import * as admin from 'firebase-admin';
 import { HttpsError } from 'firebase-functions/v2/https';
-import { type ClientOptions, ChatCompletionMessageParam } from 'openai';
+import { type ClientOptions } from 'openai';
 
 admin.initializeApp();
 
@@ -102,7 +102,7 @@ export const suggestParentLevels = functions.https.onCall(async (data, context) 
   try {
     const openai = getOpenAIClient();
     
-    const messages: ChatCompletionMessageParam[] = [
+    const messages = [
       {
         role: 'system',
         content: 'You are an AI assistant helping to suggest relevant parent categories for educational topics. Respond only with a JSON array of suggested parent names.'
