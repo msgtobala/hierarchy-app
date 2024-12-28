@@ -113,6 +113,7 @@ export function AIImageModal({ isOpen, onClose, onImageSelect, levelName }: AIIm
                       selectedImageIndex === index ? 'bg-opacity-5' : 'bg-opacity-0 group-hover:bg-opacity-10'
                     } transition-all duration-200 rounded-lg`} />
                     <button
+                      type="button"
                       className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     >
                       <span className="bg-[rgb(255,127,80)] text-white px-4 py-2 rounded-full text-sm font-medium">
