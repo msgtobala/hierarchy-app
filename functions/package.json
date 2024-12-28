@@ -17,11 +17,7 @@
   "dependencies": {
     "firebase-admin": "^11.11.1",
     "firebase-functions": "^4.5.0",
-    "openai": "^4.28.0",
-    "cors": "^2.8.5",
-    "openai": "^4.28.0",
-    "cors": "^2.8.5",
-    "node-fetch": "^2.7.0"
+    "openai": "^4.28.0"
   },
   "devDependencies": {
     "typescript": "^5.3.3"
