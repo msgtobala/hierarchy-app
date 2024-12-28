@@ -7,6 +7,7 @@ import { EditLevelModal } from './EditLevelModal';
 import { getMaxLevel } from '../lib/maxLevelService';
 import { LevelFilters } from './LevelFilters';
 import { performSetOperation } from '../lib/setOperations';
+import { FloatingAIButton } from './FloatingAIButton';
 
 interface HierarchyViewProps {
   currentLevel: number;
@@ -35,6 +36,18 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
   const [levelRelationships, setLevelRelationships] = useState<Record<string, string[]>>({});
   const [availableParents, setAvailableParents] = useState<Level[]>([]);
   const [selectedOperation, setSelectedOperation] = useState<'union' | 'intersection' | 'difference' | null>(null); 
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [selectedLevelForAI, setSelectedLevelForAI] = useState<GroupedLevel | null>(null);
+
+  const handleImageSelect = async (url: string, levelId: string) => {
+    try {
+      const docRef = doc(db, `level${currentLevel}`, levelId);
+      await updateDoc(docRef, { image: url });
+    } catch (error) {
+      console.error('Error updating image:', error);
+      throw error;
+    }
+  };
 
   const isMaxLevel = useMemo(() => currentLevel === maxLevel, [currentLevel, maxLevel]);
 
@@ -426,7 +439,7 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
               <div className="flex items-center justify-end mt-4 space-x-2">
                 <button
                   onClick={() => handleToggleVerification(level)}
-                  className={`inline-flex items-center p-1.5 hover:bg-gray-100 rounded-full transition-colors ${
+                  className={`inline-flex items-center p-1.5 hover:bg-gray-100 rounded-full transition-colors mr-2 ${
                     level.isVerified ? 'text-coral-600' : 'text-gray-400'
                   }`}
                   title="Verify"
@@ -446,6 +459,18 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
                     {level.isVerified && <path d="m9 12 2 2 4-4"/>}
                   </svg>
                   <span className="ml-1 text-sm">{level.isVerified ? 'Verified' : 'Verify'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedLevelForAI(level);
+                    setShowAIModal(true);
+                  }}
+                  className="inline-flex items-center p-1.5 hover:bg-gray-100 rounded-full text-gray-400"
+                  title="Generate AI image"
+                >
+                  <Bot className="w-5 h-5" />
+                  <span className="ml-1 text-sm">AI (Sugg)</span>
                 </button>
                 <button
                   onClick={() => handleEdit(level)}
@@ -476,6 +501,23 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
           ))
         )}
       </div>
+      
+      <FloatingAIButton
+        levelName={selectedLevelForAI?.name}
+        onImageSelect={(url) => selectedLevelForAI && handleImageSelect(url, selectedLevelForAI.id)}
+      />
+      
+      {showAIModal && selectedLevelForAI && (
+        <AIImageModal
+          isOpen={showAIModal}
+          onClose={() => {
+            setShowAIModal(false);
+            setSelectedLevelForAI(null);
+          }}
+          onImageSelect={(url) => handleImageSelect(url, selectedLevelForAI.id)}
+          levelName={selectedLevelForAI.name}
+        />
+      )}
       
       {editingLevel && (
         <EditLevelModal
