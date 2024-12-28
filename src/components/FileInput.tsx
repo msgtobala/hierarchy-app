@@ -1,6 +1,7 @@
 import React from 'react';
 import { Bot } from 'lucide-react';
 import { AIImageModal } from './AIImageModal';
+import { ImageShimmer } from './ImageShimmer';
 
 interface FileInputHandle {
   reset: () => void;
@@ -10,7 +11,7 @@ interface FileInputProps {
   label: string;
   required?: boolean;
   levelName?: string;
-  onFileSelect: (fileInfo: { file: File; preview: string } | null) => void;
+  onFileSelect: (fileInfo: { file: File | null; preview: string } | null) => void;
 }
 
 export const FileInput = React.forwardRef<FileInputHandle, FileInputProps>(function FileInput(
@@ -18,22 +19,26 @@ export const FileInput = React.forwardRef<FileInputHandle, FileInputProps>(funct
   ref
 ) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [selectedFile, setSelectedFile] = React.useState<{ file: File; preview: string } | null>(null);
+  const [selectedFile, setSelectedFile] = React.useState<{ file: File | null; preview: string } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [showAIModal, setShowAIModal] = React.useState(false);
+  const [isLoadingImage, setIsLoadingImage] = React.useState(false);
 
   const handleAIImageSelect = async (url: string) => {
+    setIsLoadingImage(true);
     try {
       const response = await fetch(url);
-      const blob = await response.blob();
-      const file = new File([blob], `ai-generated-${Date.now()}.png`, { type: 'image/png' });
-      const preview = URL.createObjectURL(file);
-      
-      setSelectedFile({ file, preview });
-      onFileSelect({ file, preview });
-      setShowAIModal(false);
+      if (!response.ok) {
+        throw new Error('Failed to load AI generated image');
+      }
+      setSelectedFile({ file: null, preview: url });
+      onFileSelect({ file: null, preview: url });
+      setError(null);
     } catch (err) {
-      setError('Failed to load AI generated image');
+      console.error('Error loading AI image:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load AI generated image');
+    } finally {
+      setIsLoadingImage(false);
     }
   };
 
@@ -106,10 +111,25 @@ export const FileInput = React.forwardRef<FileInputHandle, FileInputProps>(funct
             >
               <span>Choose Image</span>
             </button>
-            {selectedFile && (
+            {(selectedFile || isLoadingImage) && (
               <div className="flex items-center space-x-2">
-                <img src={selectedFile.preview} alt="Preview" className="w-8 h-8 rounded object-cover" />
-                <span className="text-sm text-gray-600">1 image selected</span>
+                <div className="relative w-8 h-8">
+                  <ImageShimmer />
+                  {selectedFile && (
+                    <img 
+                      src={selectedFile.preview} 
+                      alt="Preview" 
+                      className="absolute inset-0 w-full h-full rounded object-cover opacity-0 transition-opacity duration-300"
+                      onLoad={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.classList.remove('opacity-0');
+                      }}
+                    />
+                  )}
+                </div>
+                <span className="text-sm text-gray-600">
+                  {isLoadingImage ? 'Loading image...' : '1 image selected'}
+                </span>
               </div>
             )}
           </div>

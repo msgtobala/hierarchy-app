@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { generateImages } from '../lib/imageGeneration';
+import { ImageShimmer } from './ImageShimmer';
 
 interface AIImageModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ export function AIImageModal({ isOpen, onClose, onImageSelect, levelName }: AIIm
   const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
 
   const handleGenerateImages = async () => {
     setLoading(true);
@@ -28,11 +30,27 @@ export function AIImageModal({ isOpen, onClose, onImageSelect, levelName }: AIIm
     }
   };
 
+  const handleImageSelect = async (url: string, index: number) => {
+    setSelectedImageIndex(index);
+    try {
+      await onImageSelect(url);
+      onClose();
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      setError(error instanceof Error ? error.message : 'Failed to download selected image');
+      setSelectedImageIndex(null);
+    }
+  };
   React.useEffect(() => {
     if (isOpen && levelName) {
       handleGenerateImages();
     }
-  }, [isOpen, levelName]);
+    return () => {
+      // Cleanup images when modal closes
+      setImages([]);
+      setSelectedImageIndex(null);
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -74,35 +92,36 @@ export function AIImageModal({ isOpen, onClose, onImageSelect, levelName }: AIIm
                 {images.map((url, index) => (
                   <div 
                     key={index}
-                    className="relative group cursor-pointer"
-                    onClick={() => onImageSelect(url)}
+                    className={`relative group cursor-pointer ${
+                      selectedImageIndex === index ? 'ring-2 ring-[rgb(255,127,80)]' : ''
+                    }`}
+                    onClick={() => handleImageSelect(url, index)}
                   >
-                    <img 
-                      src={url} 
-                      alt={`Generated image ${index + 1}`}
-                      className="w-full h-48 object-cover rounded-lg"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg" />
+                    <div className="relative w-full h-48">
+                      <ImageShimmer />
+                      <img 
+                        crossOrigin="anonymous"
+                        src={url} 
+                        alt={`Generated image ${index + 1}`}
+                        className="absolute inset-0 w-full h-full object-cover rounded-lg opacity-0 transition-opacity duration-300"
+                        onLoad={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.classList.remove('opacity-0');
+                        }}
+                      />
+                    </div>
+                    <div className={`absolute inset-0 bg-black ${
+                      selectedImageIndex === index ? 'bg-opacity-5' : 'bg-opacity-0 group-hover:bg-opacity-10'
+                    } transition-all duration-200 rounded-lg`} />
                     <button
                       className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     >
                       <span className="bg-[rgb(255,127,80)] text-white px-4 py-2 rounded-full text-sm font-medium">
-                        Select Image
+                        {selectedImageIndex === index ? 'Selected' : 'Select Image'}
                       </span>
                     </button>
                   </div>
                 ))}
-              </div>
-            )}
-
-            {!loading && images.length > 0 && (
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={handleGenerateImages}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[rgb(255,127,80)] hover:bg-[rgb(255,100,50)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(255,127,80)]"
-                >
-                  Generate More
-                </button>
               </div>
             )}
           </div>

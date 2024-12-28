@@ -4,10 +4,14 @@ import { auth } from './auth';
 
 const storage = getStorage(app);
 
-export async function uploadImage(file: File, path: string): Promise<string> {
+export async function uploadImage(file: Blob | File | null, path: string): Promise<string> {
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error('User must be authenticated to upload images');
+  }
+
+  if (!file) {
+    throw new Error('No file provided for upload');
   }
 
   try {
@@ -16,7 +20,7 @@ export async function uploadImage(file: File, path: string): Promise<string> {
     const downloadURL = await getDownloadURL(snapshot.ref);
     return downloadURL;
   } catch (error) {
-    console.error('Error uploading image:', error);
-    throw error;
+    console.error('Storage upload error:', error);
+    throw new Error('Failed to upload image to storage. Please try again.');
   }
 }

@@ -4,11 +4,12 @@ import { db } from '../lib/firebase';
 import { FileInput } from './FileInput';
 import { Level } from '../types';
 import { MultiSelect } from './MultiSelect';
-import { uploadImage } from '../lib/storage';
+import { processAndUploadImage } from '../lib/imageUtils';
 import { useLevelData } from '../hooks/useLevelData';
 import { findExistingLevel } from '../lib/levelUtils';
 import { ErrorPopup } from './ErrorPopup';
 import { Snackbar } from './Snackbar';
+import { useRef } from 'react';
 
 interface LevelFormProps {
   level: number;
@@ -17,20 +18,25 @@ interface LevelFormProps {
 export function LevelForm({ level }: LevelFormProps) {
   const [name, setName] = useState('');
   const [selectedParents, setSelectedParents] = useState<string[]>([]);
-  const fileInputRef = React.useRef<{ reset: () => void }>(null);
-  const [selectedFile, setSelectedFile] = useState<{ file: File; preview: string } | null>(null);
+  const fileInputRef = useRef<{ reset: () => void }>(null);
+  const [selectedFile, setSelectedFile] = useState<{ file: File | null; preview: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { parentLevels } = useLevelData(level);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const handleFileSelect = (fileInfo: { file: File; preview: string } | null) => {
+  const handleFileSelect = (fileInfo: { file: File | null; preview: string } | null) => {
     setSelectedFile(fileInfo);
+    if (error === 'Please upload an image before adding the level') {
+      setError(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
 
     try {
       if (!selectedFile) {
@@ -39,9 +45,15 @@ export function LevelForm({ level }: LevelFormProps) {
         return;
       }
 
-      // Upload image first
-      const path = `levels/level${level}/${Date.now()}_${selectedFile.file.name}`;
-      const imageUrl = await uploadImage(selectedFile.file, path);
+      // Process and upload image
+      const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const timestamp = Date.now();
+      const path = `levels/level${level}/${timestamp}_${sanitizedName}.png`;
+
+      const imageUrl = await processAndUploadImage(selectedFile, path);
+      if (!imageUrl) {
+        throw new Error('Failed to upload image');
+      }
 
       // Check if an item with this name already exists
       const existingLevel = await findExistingLevel(level, name);
@@ -73,16 +85,21 @@ export function LevelForm({ level }: LevelFormProps) {
       setName('');
       setSelectedParents([]);
       fileInputRef.current?.reset();
+      setSelectedFile(null);
     } catch (error) {
-      console.error(`Error adding L${level}:`, error);
-      setError('Error adding level. Please try again.');
+      console.error('Level form error:', error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
       {error && <ErrorPopup message={error} onClose={() => setError(null)} />}
       {success && <Snackbar message={success} onClose={() => setSuccess(null)} />}
       <div>
