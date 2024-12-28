@@ -142,15 +142,26 @@ export const generateImages = functions.https.onCall(async (data, context) => {
   } catch (error) {
     console.error('DALL-E API Error:', error);
 
+    // Type guard for OpenAI API errors
+    interface OpenAIError {
+      response?: {
+        status?: number;
+      };
+    }
+
+    const isOpenAIError = (err: unknown): err is OpenAIError => {
+      return typeof err === 'object' && err !== null && 'response' in err;
+    };
+
     // Handle OpenAI API specific errors
-    if (error?.response?.status === 429) {
+    if (isOpenAIError(error) && error.response?.status === 429) {
       throw new HttpsError(
         'resource-exhausted',
         'Rate limit exceeded. Please try again later.'
       );
     }
 
-    if (error?.response?.status === 400) {
+    if (isOpenAIError(error) && error.response?.status === 400) {
       throw new HttpsError(
         'invalid-argument',
         'Invalid prompt or request. Please try with a different prompt.'
