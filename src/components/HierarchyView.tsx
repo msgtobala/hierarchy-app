@@ -58,9 +58,16 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
         availableParents
       );
       setSuggestedParents(suggestions);
+      if (suggestions.length === 0) {
+        setSuggestionsError('No additional parent suggestions found for this level.');
+      }
     } catch (error) {
       console.error('Error getting parent suggestions:', error);
-      setSuggestionsError('Failed to get AI suggestions. Please try again.');
+      setSuggestionsError(
+        error.code === 'not-found' 
+          ? 'No additional parent suggestions found for this level.'
+          : 'Failed to get AI suggestions. Please try again.'
+      );
     } finally {
       setLoadingSuggestions(false);
     }
@@ -517,39 +524,34 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
                   </svg>
                   <span className="ml-1 text-sm">{level.isVerified ? 'Verified' : 'Verify'}</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleGetParentSuggestions(level)}
-                  className="inline-flex items-center p-1.5 hover:bg-gray-100 rounded-full text-gray-400"
-                  title="Get AI suggestions for parent levels"
-                >
-                  <Bot className="w-5 h-5" />
-                  <span className="ml-1 text-sm">AI (Sugg)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedLevelForAI(level);
-                    setShowAIModal(true);
-                  }}
-                  className="inline-flex items-center p-1.5 hover:bg-gray-100 rounded-full text-gray-400"
-                  title="Generate AI image"
-                >
-                  <Bot className="w-5 h-5" />
-                  <span className="ml-1 text-sm">AI (Sugg)</span>
-                </button>
-                <button
-                  onClick={() => handleEdit(level)}
-                  className={`p-1.5 rounded-full transition-colors ${
-                    level.isVerified 
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                      : 'text-gray-400 hover:bg-gray-100'
-                  }`}
-                  disabled={level.isVerified}
-                  title={level.isVerified ? 'Cannot edit verified records' : 'Edit'}
-                >
-                  <Edit2 className={`w-5 h-5 ${level.isVerified ? 'text-gray-400' : 'text-gray-500'}`} />
-                </button>
+                {!isMaxLevel && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleGetParentSuggestions(level)}
+                      className={`inline-flex items-center p-1.5 hover:bg-gray-100 rounded-full text-gray-400 ${
+                        level.isVerified ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      disabled={level.isVerified}
+                      title={level.isVerified ? 'Cannot get suggestions for verified records' : 'Get AI suggestions for parent levels'}
+                    >
+                      <Bot className="w-5 h-5" />
+                      <span className="ml-1 text-sm">AI (Sugg)</span>
+                    </button>
+                    <button
+                      onClick={() => handleEdit(level)}
+                      className={`p-1.5 rounded-full transition-colors ${
+                        level.isVerified 
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                          : 'text-gray-400 hover:bg-gray-100'
+                      }`}
+                      disabled={level.isVerified}
+                      title={level.isVerified ? 'Cannot edit verified records' : 'Edit'}
+                    >
+                      <Edit2 className={`w-5 h-5 ${level.isVerified ? 'text-gray-400' : 'text-gray-500'}`} />
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => handleDelete(level.id)}
                   className={`p-1.5 rounded-full transition-colors ${
@@ -569,8 +571,8 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
       </div>
       
       <FloatingAIButton
-        levelName={selectedLevelForAI?.name}
-        onImageSelect={(url) => selectedLevelForAI && handleImageSelect(url, selectedLevelForAI.id)}
+        levelName={selectedLevelForAI?.name || ''}
+        onImageSelect={(url) => selectedLevelForAI && handleImageSelect(url, selectedLevelForAI.id)} 
       />
       
       {showAIModal && selectedLevelForAI && (

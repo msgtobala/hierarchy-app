@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import * as admin from 'firebase-admin';
 import { HttpsError } from 'firebase-functions/v2/https';
 import { type ClientOptions } from 'openai';
+import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 admin.initializeApp();
 
@@ -105,7 +106,7 @@ export const suggestParentLevels = functions.https.onCall(async (data, context) 
     const messages = [
       {
         role: 'system',
-        content: 'You are an AI assistant helping to suggest relevant parent categories for educational topics. Respond only with a JSON array of suggested parent names.'
+        content: 'You are an AI assistant helping to suggest relevant parent categories for educational topics. Respond only with a JSON array of strings of suggested parent names.'
       },
       {
         role: 'user',
@@ -115,12 +116,13 @@ export const suggestParentLevels = functions.https.onCall(async (data, context) 
 
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      messages,
+      messages: messages as ChatCompletionMessageParam[],
       temperature: 0.7,
       max_tokens: 500
     });
+    
 
-    const suggestedParents = JSON.parse(response.choices[0].message.content || '[]');
+    const suggestedParents = JSON.parse(response.choices[0].message.content?.replace(/```json\n|\n```/g, '').trim() || '[]');
     if (!Array.isArray(suggestedParents)) {
       throw new Error('Invalid response format from AI');
     }
