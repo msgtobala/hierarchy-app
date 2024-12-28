@@ -6,11 +6,12 @@ import { ChevronDown } from 'lucide-react';
 
 export function AddLevel() {
   const [maxLevel, setMaxLevel] = useState(3);
-  const [expandedLevel, setExpandedLevel] = useState<number | null>(null);
+  const [expandedLevel, setExpandedLevel] = useState<number | null>(maxLevel);
 
   const fetchMaxLevel = async () => {
     const level = await getMaxLevel();
     setMaxLevel(level);
+    setExpandedLevel(level);
   };
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export function AddLevel() {
             >
               <div className="flex items-center space-x-2">
                 <span className="text-lg font-medium text-gray-900">L{level} Level</span>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-coral-100 text-coral-800">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[rgb(255,127,80)] text-white">
                   Level {level}
                 </span>
               </div>

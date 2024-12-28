@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "lint": "eslint .",
-    "preview": "vite preview", 
+    "preview": "vite preview",
     "dev": "vite --mode development",
     "uat": "vite --mode uat",
     "prod": "vite --mode production",
@@ -23,8 +23,7 @@
     "react-dom": "^18.3.1",
     "firebase": "^10.8.0",
     "react-router-dom": "^6.22.2",
-    "@headlessui/react": "^1.7.18",
-    "clsx": "^2.1.0"
+    "@headlessui/react": "^1.7.18"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
@@ -35,6 +34,7 @@
     "eslint": "^9.9.1",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.11",
+    "firebase-tools": "^13.0.2",
     "globals": "^15.9.0",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",

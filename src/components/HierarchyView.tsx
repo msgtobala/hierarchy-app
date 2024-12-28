@@ -7,6 +7,9 @@ import { EditLevelModal } from './EditLevelModal';
 import { getMaxLevel } from '../lib/maxLevelService';
 import { LevelFilters } from './LevelFilters';
 import { performSetOperation } from '../lib/setOperations';
+import { FloatingAIButton } from './FloatingAIButton';
+import { AIParentSuggestionsModal } from './AIParentSuggestionsModal';
+import { getSuggestedParents } from '../lib/parentSuggestions';
 
 interface HierarchyViewProps {
   currentLevel: number;
@@ -35,6 +38,80 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
   const [levelRelationships, setLevelRelationships] = useState<Record<string, string[]>>({});
   const [availableParents, setAvailableParents] = useState<Level[]>([]);
   const [selectedOperation, setSelectedOperation] = useState<'union' | 'intersection' | 'difference' | null>(null); 
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [selectedLevelForAI, setSelectedLevelForAI] = useState<GroupedLevel | null>(null);
+  const [showParentSuggestionsModal, setShowParentSuggestionsModal] = useState(false);
+  const [suggestedParents, setSuggestedParents] = useState<Level[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+
+  const handleGetParentSuggestions = async (level: GroupedLevel) => {
+    setLoadingSuggestions(true);
+    setSuggestionsError(null);
+    setSelectedLevelForAI(level);
+    setShowParentSuggestionsModal(true);
+
+    try {
+      const suggestions = await getSuggestedParents(
+        level.name,
+        level.parents,
+        availableParents
+      );
+      setSuggestedParents(suggestions);
+      if (suggestions.length === 0) {
+        setSuggestionsError('No additional parent suggestions found for this level.');
+      }
+    } catch (error) {
+      console.error('Error getting parent suggestions:', error);
+      setSuggestionsError(
+        error.code === 'not-found' 
+          ? 'No additional parent suggestions found for this level.'
+          : 'Failed to get AI suggestions. Please try again.'
+      );
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const handleSaveNewParents = async (newParentIds: string[]) => {
+    if (!selectedLevelForAI) return;
+
+    try {
+      const docRef = doc(db, `level${selectedLevelForAI.level}`, selectedLevelForAI.id);
+      const existingParentIds = selectedLevelForAI.parents.map(p => p.id);
+      const updatedParentIds = [...new Set([...existingParentIds, ...newParentIds])];
+      
+      await updateDoc(docRef, { 
+        parentIds: updatedParentIds
+      });
+
+      // Update local state
+      const newParents = availableParents.filter(p => newParentIds.includes(p.id));
+      setGroupedLevels(prevLevels =>
+        prevLevels.map(level =>
+          level.id === selectedLevelForAI.id
+            ? { ...level, parents: [...level.parents, ...newParents] }
+            : level
+        )
+      );
+
+      setShowParentSuggestionsModal(false);
+      setSelectedLevelForAI(null);
+    } catch (error) {
+      console.error('Error saving new parents:', error);
+      setSuggestionsError('Failed to save new parents. Please try again.');
+    }
+  };
+
+  const handleImageSelect = async (url: string, levelId: string) => {
+    try {
+      const docRef = doc(db, `level${currentLevel}`, levelId);
+      await updateDoc(docRef, { image: url });
+    } catch (error) {
+      console.error('Error updating image:', error);
+      throw error;
+    }
+  };
 
   const isMaxLevel = useMemo(() => currentLevel === maxLevel, [currentLevel, maxLevel]);
 
@@ -394,9 +471,21 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
           filteredLevels.map((level) => (
             <div key={level.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center space-x-3 mb-4">
-                <div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
-                  <Bot className="w-5 h-5 text-gray-600" />
-                </div>
+                {level.image ? (
+                  <img 
+                    src={level.image} 
+                    alt={level.name}
+                    className="w-8 h-8 object-cover rounded-full"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0xMiAyMmM1LjUyMyAwIDEwLTQuNDc3IDEwLTEwUzE3LjUyMyAyIDEyIDIgMiA2LjQ3NyAyIDEyczQuNDc3IDEwIDEwIDEweiIvPjxwYXRoIGQ9Ik0xMiAxNmEzIDMgMCAxIDAgMC02IDMgMyAwIDAgMCAwIDZ6Ii8+PC9zdmc+';
+                    }}
+                  />
+                ) : (
+                  <div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
+                    <Bot className="w-5 h-5 text-gray-600" />
+                  </div>
+                )}
                 <div>
                   <h3 className="font-medium">{level.name}</h3>
                   <p className="text-sm text-gray-500">Level {currentLevel + 1}</p>
@@ -405,7 +494,7 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
               
               <div className="flex flex-wrap gap-2 mt-3">
                 {level.parents.map((parent) => (
-                  <div key={parent.id} className="inline-flex items-center px-3 py-1 bg-coral-100 text-coral-800 rounded-full">
+                  <div key={parent.id} className="inline-flex items-center px-3 py-1 bg-[rgb(255,127,80)] text-white rounded-full">
                     <span className="text-sm font-medium">{parent.name}</span>
                   </div>
                 ))}
@@ -414,7 +503,7 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
               <div className="flex items-center justify-end mt-4 space-x-2">
                 <button
                   onClick={() => handleToggleVerification(level)}
-                  className={`inline-flex items-center p-1.5 hover:bg-gray-100 rounded-full transition-colors ${
+                  className={`inline-flex items-center p-1.5 hover:bg-gray-100 rounded-full transition-colors mr-2 ${
                     level.isVerified ? 'text-coral-600' : 'text-gray-400'
                   }`}
                   title="Verify"
@@ -435,18 +524,34 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
                   </svg>
                   <span className="ml-1 text-sm">{level.isVerified ? 'Verified' : 'Verify'}</span>
                 </button>
-                <button
-                  onClick={() => handleEdit(level)}
-                  className={`p-1.5 rounded-full transition-colors ${
-                    level.isVerified 
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                      : 'text-gray-400 hover:bg-gray-100'
-                  }`}
-                  disabled={level.isVerified}
-                  title={level.isVerified ? 'Cannot edit verified records' : 'Edit'}
-                >
-                  <Edit2 className={`w-5 h-5 ${level.isVerified ? 'text-gray-400' : 'text-gray-500'}`} />
-                </button>
+                {!isMaxLevel && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleGetParentSuggestions(level)}
+                      className={`inline-flex items-center p-1.5 hover:bg-gray-100 rounded-full text-gray-400 ${
+                        level.isVerified ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      disabled={level.isVerified}
+                      title={level.isVerified ? 'Cannot get suggestions for verified records' : 'Get AI suggestions for parent levels'}
+                    >
+                      <Bot className="w-5 h-5" />
+                      <span className="ml-1 text-sm">AI (Sugg)</span>
+                    </button>
+                    <button
+                      onClick={() => handleEdit(level)}
+                      className={`p-1.5 rounded-full transition-colors ${
+                        level.isVerified 
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                          : 'text-gray-400 hover:bg-gray-100'
+                      }`}
+                      disabled={level.isVerified}
+                      title={level.isVerified ? 'Cannot edit verified records' : 'Edit'}
+                    >
+                      <Edit2 className={`w-5 h-5 ${level.isVerified ? 'text-gray-400' : 'text-gray-500'}`} />
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => handleDelete(level.id)}
                   className={`p-1.5 rounded-full transition-colors ${
@@ -464,6 +569,39 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
           ))
         )}
       </div>
+      
+      <FloatingAIButton
+        levelName={selectedLevelForAI?.name || ''}
+        onImageSelect={(url) => selectedLevelForAI && handleImageSelect(url, selectedLevelForAI.id)} 
+      />
+      
+      {showAIModal && selectedLevelForAI && (
+        <AIImageModal
+          isOpen={showAIModal}
+          onClose={() => {
+            setShowAIModal(false);
+            setSelectedLevelForAI(null);
+          }}
+          onImageSelect={(url) => handleImageSelect(url, selectedLevelForAI.id)}
+          levelName={selectedLevelForAI.name}
+        />
+      )}
+      
+      {showParentSuggestionsModal && selectedLevelForAI && (
+        <AIParentSuggestionsModal
+          isOpen={showParentSuggestionsModal}
+          onClose={() => {
+            setShowParentSuggestionsModal(false);
+            setSelectedLevelForAI(null);
+            setSuggestedParents([]);
+            setSuggestionsError(null);
+          }}
+          onSave={handleSaveNewParents}
+          suggestedParents={suggestedParents}
+          loading={loadingSuggestions}
+          error={suggestionsError}
+        />
+      )}
       
       {editingLevel && (
         <EditLevelModal
