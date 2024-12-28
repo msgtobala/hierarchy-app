@@ -8,6 +8,8 @@ import { getMaxLevel } from '../lib/maxLevelService';
 import { LevelFilters } from './LevelFilters';
 import { performSetOperation } from '../lib/setOperations';
 import { FloatingAIButton } from './FloatingAIButton';
+import { AIParentSuggestionsModal } from './AIParentSuggestionsModal';
+import { getSuggestedParents } from '../lib/parentSuggestions';
 
 interface HierarchyViewProps {
   currentLevel: number;
@@ -38,6 +40,61 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
   const [selectedOperation, setSelectedOperation] = useState<'union' | 'intersection' | 'difference' | null>(null); 
   const [showAIModal, setShowAIModal] = useState(false);
   const [selectedLevelForAI, setSelectedLevelForAI] = useState<GroupedLevel | null>(null);
+  const [showParentSuggestionsModal, setShowParentSuggestionsModal] = useState(false);
+  const [suggestedParents, setSuggestedParents] = useState<Level[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+
+  const handleGetParentSuggestions = async (level: GroupedLevel) => {
+    setLoadingSuggestions(true);
+    setSuggestionsError(null);
+    setSelectedLevelForAI(level);
+    setShowParentSuggestionsModal(true);
+
+    try {
+      const suggestions = await getSuggestedParents(
+        level.name,
+        level.parents,
+        availableParents
+      );
+      setSuggestedParents(suggestions);
+    } catch (error) {
+      console.error('Error getting parent suggestions:', error);
+      setSuggestionsError('Failed to get AI suggestions. Please try again.');
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const handleSaveNewParents = async (newParentIds: string[]) => {
+    if (!selectedLevelForAI) return;
+
+    try {
+      const docRef = doc(db, `level${selectedLevelForAI.level}`, selectedLevelForAI.id);
+      const existingParentIds = selectedLevelForAI.parents.map(p => p.id);
+      const updatedParentIds = [...new Set([...existingParentIds, ...newParentIds])];
+      
+      await updateDoc(docRef, { 
+        parentIds: updatedParentIds
+      });
+
+      // Update local state
+      const newParents = availableParents.filter(p => newParentIds.includes(p.id));
+      setGroupedLevels(prevLevels =>
+        prevLevels.map(level =>
+          level.id === selectedLevelForAI.id
+            ? { ...level, parents: [...level.parents, ...newParents] }
+            : level
+        )
+      );
+
+      setShowParentSuggestionsModal(false);
+      setSelectedLevelForAI(null);
+    } catch (error) {
+      console.error('Error saving new parents:', error);
+      setSuggestionsError('Failed to save new parents. Please try again.');
+    }
+  };
 
   const handleImageSelect = async (url: string, levelId: string) => {
     try {
@@ -462,6 +519,15 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
                 </button>
                 <button
                   type="button"
+                  onClick={() => handleGetParentSuggestions(level)}
+                  className="inline-flex items-center p-1.5 hover:bg-gray-100 rounded-full text-gray-400"
+                  title="Get AI suggestions for parent levels"
+                >
+                  <Bot className="w-5 h-5" />
+                  <span className="ml-1 text-sm">AI (Sugg)</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     setSelectedLevelForAI(level);
                     setShowAIModal(true);
@@ -516,6 +582,22 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
           }}
           onImageSelect={(url) => handleImageSelect(url, selectedLevelForAI.id)}
           levelName={selectedLevelForAI.name}
+        />
+      )}
+      
+      {showParentSuggestionsModal && selectedLevelForAI && (
+        <AIParentSuggestionsModal
+          isOpen={showParentSuggestionsModal}
+          onClose={() => {
+            setShowParentSuggestionsModal(false);
+            setSelectedLevelForAI(null);
+            setSuggestedParents([]);
+            setSuggestionsError(null);
+          }}
+          onSave={handleSaveNewParents}
+          suggestedParents={suggestedParents}
+          loading={loadingSuggestions}
+          error={suggestionsError}
         />
       )}
       

@@ -2,7 +2,7 @@ import * as functions from 'firebase-functions';
 import OpenAI from 'openai';
 import * as admin from 'firebase-admin';
 import { HttpsError } from 'firebase-functions/v2/https';
-import { type ClientOptions } from 'openai';
+import { type ClientOptions, ChatCompletionMessageParam } from 'openai';
 
 admin.initializeApp();
 
@@ -79,6 +79,58 @@ export const generateImages = functions.https.onCall(async (data, context) => {
     throw new HttpsError(
       'internal',
       'Failed to generate images. Please try again later.'
+    );
+  }
+});
+
+export const suggestParentLevels = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new HttpsError(
+      'unauthenticated',
+      'The function must be called while authenticated.'
+    );
+  }
+
+  const { currentLevelName, existingParents, allParentLevels } = data;
+  if (!currentLevelName || !Array.isArray(existingParents) || !Array.isArray(allParentLevels)) {
+    throw new HttpsError(
+      'invalid-argument',
+      'Missing required parameters'
+    );
+  }
+
+  try {
+    const openai = getOpenAIClient();
+    
+    const messages: ChatCompletionMessageParam[] = [
+      {
+        role: 'system',
+        content: 'You are an AI assistant helping to suggest relevant parent categories for educational topics. Respond only with a JSON array of suggested parent names.'
+      },
+      {
+        role: 'user',
+        content: `Given a topic "${currentLevelName}" with existing parent categories ${JSON.stringify(existingParents)}, suggest additional relevant parent categories from this list: ${JSON.stringify(allParentLevels)}. Only suggest categories that are not already parents. Return the response as a JSON array of strings containing only the names of suggested parents.`
+      }
+    ];
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages,
+      temperature: 0.7,
+      max_tokens: 500
+    });
+
+    const suggestedParents = JSON.parse(response.choices[0].message.content || '[]');
+    if (!Array.isArray(suggestedParents)) {
+      throw new Error('Invalid response format from AI');
+    }
+
+    return { suggestedParents };
+  } catch (error: any) {
+    console.error('AI Suggestion Error:', error);
+    throw new HttpsError(
+      'internal',
+      'Failed to get AI suggestions. Please try again later.'
     );
   }
 });
