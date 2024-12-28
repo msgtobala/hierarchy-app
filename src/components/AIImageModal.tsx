@@ -100,7 +100,6 @@ export function AIImageModal({ isOpen, onClose, onImageSelect, levelName }: AIIm
                     <div className="relative w-full h-48">
                       <ImageShimmer />
                       <img 
-                        crossOrigin="anonymous"
                         src={url} 
                         alt={`Generated image ${index + 1}`}
                         className="absolute inset-0 w-full h-full object-cover rounded-lg opacity-0 transition-opacity duration-300"

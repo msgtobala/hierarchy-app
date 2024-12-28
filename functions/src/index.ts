@@ -31,13 +31,7 @@ const getOpenAIClient = (): OpenAI => {
 };
 
 export const proxyImage = functions.https.onRequest(async (req, res) => {
-  // Enable CORS with specific options
-  const corsHandler = cors({
-    origin: true,
-    methods: ['GET', 'HEAD'],
-    allowedHeaders: ['Content-Type'],
-    maxAge: 3600
-  });
+  const corsHandler = cors({ origin: true });
 
   corsHandler(req, res, async () => {
     try {
@@ -61,16 +55,15 @@ export const proxyImage = functions.https.onRequest(async (req, res) => {
       }
 
       // Set appropriate headers
-      res.set('Access-Control-Allow-Origin', '*');
       res.set('Content-Type', contentType);
       res.set('Cache-Control', 'public, max-age=3600');
+      res.set('Access-Control-Allow-Origin', '*');
       res.set('Cross-Origin-Resource-Policy', 'cross-origin');
 
-      // Pipe the image data
+      // Stream the image data
       response.body.pipe(res);
     } catch (error) {
       console.error('Proxy error:', error);
-      res.set('Access-Control-Allow-Origin', '*');
       res.status(500).send('Internal server error');
     }
   });
@@ -94,28 +87,14 @@ export const generateImages = functions.https.onCall(async (data, context) => {
 
   try {
     const openai = getOpenAIClient();
-
     const response = await openai.images.generate({
       model: "dall-e-2",
       prompt: `Help me to create an high quality image for an online course thumbnail.The image should feature abstract symbols or simplified icons representing education, learning, and growth, such as stylized books, lightbulbs, graduation caps, or gears I want you create course thumbnail for subject:${prompt}, Do not include subject name  in the image.`,
       n: 4,
       size: "512x512"
     });
-    // Validate response data
-    if (!response?.data) {
-      throw new HttpsError(
-        'internal',
-        'Invalid response from OpenAI API'
-      );
-    }
 
-    // Log successful response for debugging
-    console.log('OpenAI API Response:', {
-      dataLength: response.data.length,
-      hasUrls: response.data.every(img => !!img.url)
-    });
-
-    if (!response.data || response.data.length === 0) {
+    if (!response?.data || response.data.length === 0) {
       throw new HttpsError('internal', 'No images were generated');
     }
 
@@ -123,64 +102,35 @@ export const generateImages = functions.https.onCall(async (data, context) => {
     const proxyUrls = response.data.map(image => {
       if (!image.url) return null;
       
-      let baseUrl: string;
-      if (process.env.FUNCTIONS_EMULATOR) {
-        baseUrl = 'http://localhost:5001';
-      } else {
-        const project = process.env.GCLOUD_PROJECT;
-        if (!project) throw new Error('GCLOUD_PROJECT environment variable is not set');
-        baseUrl = `https://${project}.cloudfunctions.net`;
+      const project = process.env.GCLOUD_PROJECT;
+      if (!project) {
+        throw new Error('GCLOUD_PROJECT environment variable is not set');
       }
-
+      
+      const region = process.env.FUNCTION_REGION || 'us-central1';
+      const baseUrl = `https://${region}-${project}.cloudfunctions.net`;
       return `${baseUrl}/proxyImage?url=${encodeURIComponent(image.url)}`;
-    }).filter(Boolean);
+    }).filter(Boolean) as string[];
 
-    return { 
-      urls: proxyUrls,
-      prompt: prompt 
-    };
-  } catch (error) {
+    return { urls: proxyUrls, prompt };
+  } catch (error: any) {
     console.error('DALL-E API Error:', error);
 
     // Type guard for OpenAI API errors
-    interface OpenAIError {
-      response?: {
-        status?: number;
-      };
-    }
-
-    const isOpenAIError = (err: unknown): err is OpenAIError => {
-      return typeof err === 'object' && err !== null && 'response' in err;
-    };
-
-    // Handle OpenAI API specific errors
-    if (isOpenAIError(error) && error.response?.status === 429) {
+    if (error?.response?.status === 429) {
       throw new HttpsError(
         'resource-exhausted',
         'Rate limit exceeded. Please try again later.'
       );
     }
 
-    if (isOpenAIError(error) && error.response?.status === 400) {
+    if (error?.response?.status === 400) {
       throw new HttpsError(
         'invalid-argument',
         'Invalid prompt or request. Please try with a different prompt.'
       );
     }
 
-    // Handle configuration errors
-    if (error instanceof HttpsError && error.code === 'failed-precondition') {
-      throw error;
-    }
-
-    // If it's already a HttpsError, rethrow it
-    if (error instanceof HttpsError) {
-      throw error;
-    }
-
-    // Default error
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('Detailed error:', errorMessage);
     throw new HttpsError(
       'internal',
       'Failed to generate images. Please try again later.'

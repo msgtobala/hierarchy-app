@@ -13,45 +13,24 @@ export async function processAndUploadImage(
     throw new Error('No image source provided');
   }
 
-  const { file, preview } = source;
-
   try {
+    const { file, preview } = source;
+
     // For manually uploaded files
     if (file) {
-      const uploadedUrl = await uploadImage(file, path);
-      return uploadedUrl;
+      return await uploadImage(file, path);
     }
 
-    // For AI-generated images
-    const response = await fetch(preview, {
-      mode: 'cors',
-      headers: {
-        'Accept': 'image/*'
-      }
-    });
+    // For AI-generated images, fetch through our proxy
+    const response = await fetch(preview);
     if (!response.ok) {
-      throw new Error('Failed to load image. Please try again.');
-    }
-
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.startsWith('image/')) {
-      throw new Error('Invalid image format received');
+      throw new Error('Failed to load image');
     }
 
     const blob = await response.blob();
-    
-    // Create a new blob with proper content type
-    const imageBlob = new Blob([blob], {
-      type: contentType
-    });
-    
-    const imageUrl = await uploadImage(imageBlob, path);
-    return imageUrl;
+    return await uploadImage(blob, path);
   } catch (error) {
     console.error('Image processing error:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to process image. Please try again.');
+    throw error instanceof Error ? error : new Error('Failed to process image');
   }
 }
