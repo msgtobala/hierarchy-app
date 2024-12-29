@@ -10,6 +10,7 @@ import { performSetOperation } from '../lib/setOperations';
 import { FloatingAIButton } from './FloatingAIButton';
 import { AIParentSuggestionsModal } from './AIParentSuggestionsModal';
 import { getSuggestedParents } from '../lib/parentSuggestions';
+import { DeleteModal } from './DeleteModal';
 
 interface HierarchyViewProps {
   currentLevel: number;
@@ -44,6 +45,7 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
   const [suggestedParents, setSuggestedParents] = useState<Level[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+  const [deletingLevel, setDeletingLevel] = useState<GroupedLevel | null>(null);
 
   const handleGetParentSuggestions = async (level: GroupedLevel) => {
     setLoadingSuggestions(true);
@@ -243,16 +245,18 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this level?')) {
-      return;
-    }
-
     try {
-      await deleteDoc(doc(db, `level${currentLevel}`, id));
+      // Delete from the correct level collection
+      const collectionName = isMaxLevel ? `level${currentLevel}` : `level${currentLevel + 1}`;
+      await deleteDoc(doc(db, collectionName, id));
+      
+      // Update local state
       setGroupedLevels(prevLevels => prevLevels.filter(level => level.id !== id));
     } catch (error) {
       console.error('Error deleting level:', error);
-      alert('Failed to delete level');
+      throw new Error('Failed to delete level');
+    } finally {
+      setDeletingLevel(null);
     }
   };
 
@@ -553,15 +557,14 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
                   </>
                 )}
                 <button
-                  onClick={() => handleDelete(level.id)}
+                  onClick={() => setDeletingLevel(level)}
                   className={`p-1.5 rounded-full transition-colors ${
                     level.isVerified 
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
                       : 'text-gray-400 hover:bg-gray-100'
                   }`}
                   disabled={level.isVerified}
-                  title={level.isVerified ? 'Cannot delete verified records' : 'Delete'}
-                >
+                  title={level.isVerified ? 'Cannot delete verified records' : 'Delete'}>
                   <Trash2 className={`w-5 h-5 ${level.isVerified ? 'text-gray-400' : 'text-gray-500'}`} />
                 </button>
               </div>
@@ -611,6 +614,14 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
           currentName={editingLevel.name}
           parents={editingLevel.parents}
           availableParents={availableParents}
+        />
+      )}
+      
+      {deletingLevel && (
+        <DeleteModal
+          isOpen={true}
+          onClose={() => setDeletingLevel(null)} 
+          onConfirm={() => handleDelete(deletingLevel.id)} 
         />
       )}
     </div>
