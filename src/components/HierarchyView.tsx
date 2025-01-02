@@ -362,7 +362,7 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
         levelItems[currentLevel]?.find(item => item.id === id)?.name || ''
       ).filter(Boolean);
       
-      filtered = groupedLevels.filter(level => {
+      filtered = filtered.filter(level => {
         const levelParentNames = level.parents.map(p => p.name);
         return performSetOperation(selectedOperation, selectedParentNames, levelParentNames);
       });
@@ -418,7 +418,10 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
       setNoRecordsMessage('');
     }
     
-    return filtered;
+    // Sort the final filtered results alphabetically by name
+    return [...filtered].sort((a, b) => 
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    );
   }, [groupedLevels, showVerified, showUnverified, selectedLevelItems, currentLevel, levelRelationships, isMaxLevel, levelItems, selectedOperation]);
 
   return (

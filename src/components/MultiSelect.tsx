@@ -105,7 +105,9 @@ export function MultiSelect({ options, value, onChange, label, required }: Multi
             className="bg-white rounded-lg shadow-lg border border-gray-200 max-h-[300px] overflow-auto"
           >
           <div className="py-1">
-            {options.map((option) => (
+            {[...options]
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((option) => (
               <div
                 key={option.id}
                 onClick={(e) => {
