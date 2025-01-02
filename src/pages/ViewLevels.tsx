@@ -77,7 +77,7 @@ export function ViewLevels() {
               }}
             >
               <div className="py-1">
-                {Array.from({ length: maxLevel }, (_, i) => i + 1).map((level) => (
+                {Array.from({ length: maxLevel - 1 }, (_, i) => i + 1).map((level) => (
                   <button
                     key={level}
                     onClick={() => {
