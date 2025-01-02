@@ -426,12 +426,12 @@ export function HierarchyView({ currentLevel }: HierarchyViewProps) {
       <div className="mb-6">
         <div className="flex items-center space-x-3 mb-4">
           <div>
-            <h2 className="text-lg font-semibold">L{currentLevel + 1} Mapping</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="text-lg font-semibold hidden">L{currentLevel + 1} Mapping</h2>
+            <h2 className="text-lg font-semibold text-gray-500">
               {isMaxLevel 
                 ? `Showing L${currentLevel} items`
                 : `Showing L${currentLevel + 1} to L${currentLevel} relationships`}
-            </p>
+            </h2>
           </div>
         </div>
         

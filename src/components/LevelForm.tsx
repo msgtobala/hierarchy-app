@@ -153,7 +153,7 @@ export function LevelForm({ level }: LevelFormProps) {
             Adding...
           </>
         ) : (
-          `Add L${level}`
+          `Add to L${level}`
         )}
       </button>
     </form>

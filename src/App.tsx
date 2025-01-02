@@ -42,7 +42,7 @@ function App() {
                     to="/"
                     className={getLinkClassName}
                   >
-                    Add Level
+                    Add Manual Entry
                   </NavLink>
                   <NavLink
                     to="/view"
