@@ -81,7 +81,7 @@ export function LevelForm({ level }: LevelFormProps) {
         });
       }
 
-      setSuccess(`Level ${level} added successfully`);
+      setSuccess(`Added to Level ${level} successfully`);
       setName('');
       setSelectedParents([]);
       fileInputRef.current?.reset();
@@ -153,7 +153,7 @@ export function LevelForm({ level }: LevelFormProps) {
             Adding...
           </>
         ) : (
-          `Add L${level}`
+          `Add to L${level}`
         )}
       </button>
     </form>

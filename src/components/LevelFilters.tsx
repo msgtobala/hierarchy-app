@@ -149,8 +149,9 @@ export function LevelFilters({
                   </div>
                   
                   <div className="h-px bg-gray-200 my-1" />
-                  
-                  {(level === 1 ? levelItems[1] : filteredLevelItems[level])?.map((item) => (
+                  {(level === 1 ? levelItems[1] : filteredLevelItems[level])
+                    ?.sort((a, b) => a.name.localeCompare(b.name))
+                    .map((item) => (
                     <div
                       key={item.id}
                       onClick={() => handleLevelToggle(level, item.id)}

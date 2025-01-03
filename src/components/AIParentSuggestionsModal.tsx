@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Info } from 'lucide-react';
 import { Level } from '../types';
 
 interface AIParentSuggestionsModalProps {
@@ -20,6 +20,8 @@ export function AIParentSuggestionsModal({
   error
 }: AIParentSuggestionsModalProps) {
   const [selectedParentIds, setSelectedParentIds] = useState<string[]>([]);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const promptText = "In the context of LMS, Given a topic X with existing parent categories, suggest additional relevant parent categories from this list. Only suggest categories that are not already parents. Return the response as a JSON array of strings containing only the names of suggested parents. The suggested categories should be relevant to parent categories";
 
   useEffect(() => {
     if (!isOpen) {
@@ -49,7 +51,20 @@ export function AIParentSuggestionsModal({
             <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
               <h3 className="text-lg font-semibold leading-6 text-gray-900 mb-4">
                 AI Suggested Parent Levels
+                <button
+                  type="button"
+                  className="ml-2 inline-flex items-center text-gray-400 hover:text-gray-500"
+                  onClick={() => setShowPrompt(!showPrompt)}
+                >
+                  <Info className="h-4 w-4" />
+                </button>
               </h3>
+
+              {showPrompt && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg text-sm text-gray-600 border border-gray-200">
+                  <p>{promptText}</p>
+                </div>
+              )}
 
               {error && (
                 <div className="mb-4 p-4 bg-red-50 rounded-md">
