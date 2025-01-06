@@ -1,51 +1,37 @@
 import React from 'react';
 import { ChevronDown, Check, GitCompare } from 'lucide-react';
 import { Level } from '../../types';
-import { SetOperationsModal } from './SetOperationsModal';
+import { SetOperationsModal } from '../common/SetOperationsModal';
 
-interface LevelFiltersProps {
+interface SwapLevelFiltersProps {
   currentLevel: number;
   showVerified: boolean;
   showUnverified: boolean;
   onVerifiedChange: (checked: boolean) => void;
   onUnverifiedChange: (checked: boolean) => void;
   levelItems: Record<number, Level[]>;
-  filteredLevelItems: Record<number, Level[]>;
   selectedLevelItems: Record<number, string[]>;
   onLevelItemsChange: (level: number, items: string[]) => void;
   selectedOperation: 'union' | 'intersection' | 'difference' | null;
   onOperationChange: (operation: 'union' | 'intersection' | 'difference' | null) => void;
-  levels: Level[];
 }
 
-export function LevelFilters({
+export function SwapLevelFilters({
   currentLevel,
   showVerified,
   showUnverified,
   onVerifiedChange,
   onUnverifiedChange,
   levelItems,
-  filteredLevelItems,
   selectedLevelItems,
   onLevelItemsChange,
   selectedOperation,
   onOperationChange,
-  levels
-}: LevelFiltersProps) {
+}: SwapLevelFiltersProps) {
   const [openLevels, setOpenLevels] = React.useState<Record<number, boolean>>({});
   const dropdownRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
   const buttonRefs = React.useRef<Record<number, HTMLButtonElement | null>>({});
   const [showSetOperations, setShowSetOperations] = React.useState(false);
-
-  // Group levels by their level number
-  const levelsByNumber = React.useMemo(() => {
-    const grouped: Record<number, Level[]> = {};
-    Object.entries(levelItems).forEach(([levelStr, items]) => {
-      const level = parseInt(levelStr);
-      grouped[level] = items;
-    });
-    return grouped;
-  }, [levelItems]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -66,9 +52,13 @@ export function LevelFilters({
     const currentSelected = selectedLevelItems[level] || [];
     
     if (itemId === '') {
+      // Clear selection
+      onLevelItemsChange(level, []);
+    } else if (currentSelected.includes(itemId)) {
+      // Deselect if already selected
       onLevelItemsChange(level, []);
     } else {
-      // Single selection mode
+      // Select new item
       onLevelItemsChange(level, [itemId]);
     }
     
@@ -79,7 +69,7 @@ export function LevelFilters({
     const selectedItems = selectedLevelItems[level] || [];
     if (selectedItems.length === 0) return 'All';
     
-    const selectedItem = levelsByNumber[level]?.find(item => item.id === selectedItems[0]);
+    const selectedItem = levelItems[level]?.find(item => item.id === selectedItems[0]);
     return selectedItem?.name || 'All';
   };
 
@@ -125,7 +115,7 @@ export function LevelFilters({
                 <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-200 ${openLevels[level] ? 'transform rotate-180' : ''}`} />
               </button>
 
-              {openLevels[level] && levelsByNumber[level] && (
+              {openLevels[level] && levelItems[level] && (
                 <div
                   ref={el => dropdownRefs.current[level] = el}
                   className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg z-50 border border-gray-200 py-1 max-h-48 overflow-auto"
@@ -141,7 +131,7 @@ export function LevelFilters({
                   </div>
                   
                   <div className="h-px bg-gray-200 my-1" />
-                  {levelsByNumber[level]
+                  {levelItems[level]
                     ?.sort((a, b) => a.name.localeCompare(b.name))
                     .map((item) => (
                       <div

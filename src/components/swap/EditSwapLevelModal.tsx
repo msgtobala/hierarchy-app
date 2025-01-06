@@ -5,8 +5,9 @@ import { Level } from '../../types';
 interface EditSwapLevelModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (newName: string, childIds: string[]) => Promise<void>;
+  onSave: (levelId: string, newName: string, childIds: string[]) => Promise<void>;
   currentName: string;
+  levelId: string; // Add levelId prop
   children: Level[];
   availableChildren: Level[];
 }
@@ -15,7 +16,8 @@ export function EditSwapLevelModal({
   isOpen, 
   onClose, 
   onSave, 
-  currentName, 
+  currentName,
+  levelId, // Add levelId to props
   children = [], 
   availableChildren = []
 }: EditSwapLevelModalProps) {
@@ -30,7 +32,7 @@ export function EditSwapLevelModal({
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await onSave(name, selectedChildren.map(c => c.id));
+      await onSave(levelId, name, selectedChildren.map(c => c.id)); // Pass levelId
       onClose();
     } catch (error) {
       console.error('Error saving:', error);
@@ -40,6 +42,7 @@ export function EditSwapLevelModal({
     }
   };
 
+  // Rest of the component remains the same
   const handleRemoveChild = (childId: string) => {
     setSelectedChildren(prev => prev.filter(c => c.id !== childId));
   };
