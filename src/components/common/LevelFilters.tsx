@@ -12,7 +12,9 @@ interface LevelFiltersProps {
   selectedLevelItems: Record<number, string[]>;
   onLevelItemsChange: (level: number, items: string[]) => void;
   selectedOperation: 'union' | 'intersection' | 'difference' | null;
-  onOperationChange: (operation: 'union' | 'intersection' | 'difference' | null) => void;
+  onOperationChange: (
+    operation: 'union' | 'intersection' | 'difference' | null
+  ) => void;
   levels: Level[];
 }
 
@@ -26,17 +28,31 @@ export function LevelFilters({
   onLevelItemsChange,
   selectedOperation,
   onOperationChange,
-  levels
+  levels,
 }: LevelFiltersProps) {
-  const [openLevels, setOpenLevels] = React.useState<Record<number, boolean>>({});
+  const [openLevels, setOpenLevels] = React.useState<Record<number, boolean>>(
+    {}
+  );
   const levelRefs = React.useRef<Record<number, HTMLButtonElement | null>>({});
   const [showSetOperations, setShowSetOperations] = React.useState(false);
+
+  // Group levels by their level number
+  const levelsByNumber = React.useMemo(() => {
+    const grouped: Record<number, Level[]> = {};
+    levels.forEach((level) => {
+      if (!grouped[level.level]) {
+        grouped[level.level] = [];
+      }
+      grouped[level.level].push(level);
+    });
+    return grouped;
+  }, [levels]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       Object.entries(levelRefs.current).forEach(([level, ref]) => {
         if (ref && !ref.contains(event.target as Node)) {
-          setOpenLevels(prev => ({ ...prev, [level]: false }));
+          setOpenLevels((prev) => ({ ...prev, [level]: false }));
         }
       });
     };
@@ -48,7 +64,7 @@ export function LevelFilters({
   const handleLevelToggle = (level: number, itemId: string) => {
     if (itemId === '') {
       onLevelItemsChange(level, []);
-      setOpenLevels(prev => ({ ...prev, [level]: false }));
+      setOpenLevels((prev) => ({ ...prev, [level]: false }));
       return;
     }
 
@@ -56,14 +72,14 @@ export function LevelFilters({
 
     if (level === currentLevel) {
       const newItems = currentSelected.includes(itemId)
-        ? currentSelected.filter(id => id !== itemId)
+        ? currentSelected.filter((id) => id !== itemId)
         : [...currentSelected, itemId];
       onLevelItemsChange(level, newItems);
       return;
     }
 
     onLevelItemsChange(level, [itemId]);
-    setOpenLevels(prev => ({ ...prev, [level]: false }));
+    setOpenLevels((prev) => ({ ...prev, [level]: false }));
   };
 
   const getLevelDisplayText = (level: number) => {
@@ -71,16 +87,22 @@ export function LevelFilters({
     if (selectedItems.length === 0) return 'All';
 
     if (level !== currentLevel) {
-      const selectedItem = levels.find(item => item.id === selectedItems[0]);
+      const selectedItem = levelsByNumber[level]?.find(
+        (item) => item.id === selectedItems[0]
+      );
       return selectedItem?.name || 'All';
     }
 
     if (selectedItems.length === 1) {
-      const selectedItem = levels.find(item => item.id === selectedItems[0]);
+      const selectedItem = levelsByNumber[level]?.find(
+        (item) => item.id === selectedItems[0]
+      );
       return selectedItem?.name || 'All';
     }
     return `${selectedItems.length} selected`;
   };
+  
+  console.log(selectedLevelItems);
 
   return (
     <div className="space-y-4 mb-4">
@@ -112,54 +134,83 @@ export function LevelFilters({
         </div>
 
         <div className="flex items-center space-x-4">
-          {Array.from({ length: currentLevel }, (_, i) => i + 1).map((level) => (
-            <div key={level} className="relative" ref={el => levelRefs.current[level] = el}>
-              <button 
-                onClick={() => setOpenLevels(prev => ({ ...prev, [level]: !prev[level] }))}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-coral-500"
+          {Array.from({ length: currentLevel }, (_, i) => i + 1).map(
+            (level) => (
+              <div
+                key={level}
+                className="relative"
+                ref={(el) => (levelRefs.current[level] = el)}
               >
-                <span className="mr-2">Level {level}:</span>
-                <span className="font-medium">{getLevelDisplayText(level)}</span>
-                <ChevronDown className={`w-4 h-4 ml-2 transition-transform duration-200 ${openLevels[level] ? 'transform rotate-180' : ''}`} />
-              </button>
+                <button
+                  onClick={() =>
+                    setOpenLevels((prev) => ({
+                      ...prev,
+                      [level]: !prev[level],
+                    }))
+                  }
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-coral-500"
+                >
+                  <span className="mr-2">Level {level}:</span>
+                  <span className="font-medium">
+                    {getLevelDisplayText(level)}
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 ml-2 transition-transform duration-200 ${
+                      openLevels[level] ? 'transform rotate-180' : ''
+                    }`}
+                  />
+                </button>
 
-              {openLevels[level] && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg z-50 border border-gray-200 py-1 max-h-48 overflow-auto">
-                  <div 
-                    onClick={() => handleLevelToggle(level, '')}
-                    className="flex items-center px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
-                  >
-                    <div className={`w-4 h-4 border border-gray-300 mr-3 flex items-center justify-center ${
-                      level === currentLevel ? 'rounded' : 'rounded-full'
-                    }`}>
-                      {(selectedLevelItems[level]?.length || 0) === 0 && <Check className="w-3 h-3 text-coral-600" />}
-                    </div>
-                    <span>All</span>
-                  </div>
-
-                  <div className="h-px bg-gray-200 my-1" />
-                  {levels
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((item) => (
+                {openLevels[level] && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg z-50 border border-gray-200 py-1 max-h-48 overflow-auto">
                     <div
-                      key={item.id}
-                      onClick={() => handleLevelToggle(level, item.id)}
+                      onClick={() => handleLevelToggle(level, '')}
                       className="flex items-center px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
                     >
-                      <div className={`w-4 h-4 border border-gray-300 mr-3 flex items-center justify-center ${level === currentLevel ? 'rounded' : 'rounded-full'}`}>
-                        {selectedLevelItems[level]?.includes(item.id) && <Check className="w-3 h-3 text-coral-600" />}
+                      <div
+                        className={`w-4 h-4 border border-gray-300 mr-3 flex items-center justify-center ${
+                          level === currentLevel ? 'rounded' : 'rounded-full'
+                        }`}
+                      >
+                        {(selectedLevelItems[level]?.length || 0) === 0 && (
+                          <Check className="w-3 h-3 text-coral-600" />
+                        )}
                       </div>
-                      <span>{item.name}</span>
+                      <span>All</span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+
+                    <div className="h-px bg-gray-200 my-1" />
+                    {levelsByNumber[level]
+                      ?.sort((a, b) => a.name.localeCompare(b.name))
+                      .map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => handleLevelToggle(level, item.id)}
+                          className="flex items-center px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                        >
+                          <div
+                            className={`w-4 h-4 border border-gray-300 mr-3 flex items-center justify-center ${
+                              level === currentLevel
+                                ? 'rounded'
+                                : 'rounded-full'
+                            }`}
+                          >
+                            {selectedLevelItems[level]?.includes(item.id) && (
+                              <Check className="w-3 h-3 text-coral-600" />
+                            )}
+                          </div>
+                          <span>{item.name}</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )
+          )}
         </div>
       </div>
 
-      {/* <div className="flex justify-end">
+      <div className="flex justify-end">
         <button
           onClick={() => setShowSetOperations(true)}
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-coral-600 hover:bg-coral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-coral-500"
@@ -167,9 +218,9 @@ export function LevelFilters({
           <GitCompare className="w-4 h-4 mr-2" />
           {selectedOperation ? `${selectedOperation} active` : 'Set Operations'}
         </button>
-      </div> */}
+      </div>
 
-      <SetOperationsModal 
+      <SetOperationsModal
         isOpen={showSetOperations}
         onClose={() => setShowSetOperations(false)}
         selectedOperation={selectedOperation}

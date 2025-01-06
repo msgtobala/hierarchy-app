@@ -7,40 +7,46 @@ export function useSwapLevelData(currentLevel: number) {
   const [groupedLevels, setGroupedLevels] = useState<(Level & { children: Level[] })[]>([]);
   const [loading, setLoading] = useState(true);
   const [availableChildren, setAvailableChildren] = useState<Level[]>([]);
+  const [levelItems, setLevelItems] = useState<Record<number, Level[]>>({});
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch current level items
-        const currentLevelSnapshot = await getDocs(collection(db, `level${currentLevel}`));
-        const currentLevelItems = currentLevelSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          level: currentLevel
-        })) as Level[];
+        // Fetch all levels up to current level + 1
+        const levelData: Record<number, Level[]> = {};
+        
+        // Create array of levels to fetch: [1, 2, ..., currentLevel, currentLevel + 1]
+        const levelsToFetch = Array.from(
+          { length: currentLevel + 1 }, 
+          (_, i) => i + 1
+        );
 
-        // Fetch next level items (potential children)
-        const nextLevelSnapshot = await getDocs(collection(db, `level${currentLevel + 1}`));
-        const nextLevelItems = nextLevelSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          level: currentLevel + 1
-        })) as Level[];
+        await Promise.all(
+          levelsToFetch.map(async (level) => {
+            const snapshot = await getDocs(collection(db, `level${level}`));
+            levelData[level] = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data(),
+              level
+            })) as Level[];
+          })
+        );
 
-        setAvailableChildren(nextLevelItems);
+        setLevelItems(levelData);
+        setAvailableChildren(levelData[currentLevel + 1] || []);
 
         // Group items by parent
-        const groupedItems = currentLevelItems.map(parent => {
-          const children = nextLevelItems.filter(child => 
+        const groupedItems = levelData[currentLevel]?.map(parent => {
+          const children = levelData[currentLevel + 1]?.filter(child => 
             child.parentIds?.includes(parent.id)
-          );
+          ) || [];
 
           return {
             ...parent,
             children
           };
-        });
+        }) || [];
 
         setGroupedLevels(groupedItems);
       } catch (error) {
@@ -53,6 +59,7 @@ export function useSwapLevelData(currentLevel: number) {
     fetchData();
   }, [currentLevel]);
 
+  // Rest of the code remains the same...
   const handleDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, `level${currentLevel}`, id));
@@ -103,7 +110,7 @@ export function useSwapLevelData(currentLevel: number) {
       await updateDoc(docRef, {
         isVerified: !level.isVerified
       });
-
+      
       setGroupedLevels(prev => 
         prev.map(l => 
           l.id === level.id ? { ...l, isVerified: !l.isVerified } : l
@@ -119,6 +126,7 @@ export function useSwapLevelData(currentLevel: number) {
     groupedLevels,
     loading,
     availableChildren,
+    levelItems,
     handleDelete,
     handleSaveEdit,
     handleToggleVerification

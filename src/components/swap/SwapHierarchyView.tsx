@@ -18,6 +18,7 @@ export function SwapHierarchyView({ currentLevel }: SwapHierarchyViewProps) {
     groupedLevels,
     loading,
     availableChildren,
+    levelItems,
     handleDelete,
     handleSaveEdit,
     handleToggleVerification,
@@ -33,7 +34,7 @@ export function SwapHierarchyView({ currentLevel }: SwapHierarchyViewProps) {
 
   const filteredLevels = useMemo(() => {
     let filtered = groupedLevels;
-
+    
     if ((showVerified || showUnverified) && filtered.length > 0) {
       filtered = filtered.filter(level => 
         (showVerified && level.isVerified) || (showUnverified && !level.isVerified)
@@ -46,11 +47,11 @@ export function SwapHierarchyView({ currentLevel }: SwapHierarchyViewProps) {
       ).filter(Boolean);
 
       filtered = filtered.filter(level => {
-        const levelParentNames = level.parents.map(p => p.name);
-        return performSetOperation(selectedOperation, selectedNames, levelParentNames);
+        const levelChildNames = level.children.map(p => p.name);
+        return performSetOperation(selectedOperation, selectedNames, levelChildNames);
       });
     }
-
+    
     if (filtered.length === 0) {
       setNoRecordsMessage(
         showVerified ? 'No verified records found' :
@@ -60,7 +61,7 @@ export function SwapHierarchyView({ currentLevel }: SwapHierarchyViewProps) {
     } else {
       setNoRecordsMessage('');
     }
-
+    
     return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   }, [groupedLevels, showVerified, showUnverified, selectedLevelItems, currentLevel, selectedOperation]);
 
@@ -77,7 +78,7 @@ export function SwapHierarchyView({ currentLevel }: SwapHierarchyViewProps) {
           onLevelItemsChange={setSelectedLevelItems}
           selectedOperation={selectedOperation}
           onOperationChange={setSelectedOperation}
-          levels={groupedLevels}
+          levels={Object.values(levelItems).flat()}
         />
       </div>
 
@@ -115,8 +116,8 @@ export function SwapHierarchyView({ currentLevel }: SwapHierarchyViewProps) {
           isOpen={true}
           onClose={() => setEditingLevel(null)}
           onSave={handleSaveEdit}
-          levelId={editingLevel.id}
           currentName={editingLevel.name}
+          levelId={editingLevel.id}
           children={editingLevel.children}
           availableChildren={availableChildren}
         />
