@@ -115,6 +115,7 @@ export function SwapHierarchyView({ currentLevel }: SwapHierarchyViewProps) {
           isOpen={true}
           onClose={() => setEditingLevel(null)}
           onSave={handleSaveEdit}
+          levelId={editingLevel.id}
           currentName={editingLevel.name}
           children={editingLevel.children}
           availableChildren={availableChildren}

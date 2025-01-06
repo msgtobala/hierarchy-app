@@ -5,7 +5,8 @@ import { Level } from '../../types';
 interface EditSwapLevelModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (newName: string, childIds: string[]) => Promise<void>;
+  onSave: (levelId: string, newName: string, childIds: string[]) => Promise<void>;
+  levelId: string;
   currentName: string;
   children: Level[];
   availableChildren: Level[];
@@ -16,6 +17,7 @@ export function EditSwapLevelModal({
   onClose, 
   onSave, 
   currentName, 
+  levelId,
   children = [], 
   availableChildren = []
 }: EditSwapLevelModalProps) {
@@ -30,7 +32,7 @@ export function EditSwapLevelModal({
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await onSave(name, selectedChildren.map(c => c.id));
+      await onSave(levelId, name, selectedChildren.map(c => c.id));
       onClose();
     } catch (error) {
       console.error('Error saving:', error);
