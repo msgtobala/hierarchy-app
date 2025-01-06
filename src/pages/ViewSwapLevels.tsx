@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { HierarchyView } from '../components/HierarchyView';
+import { SwapHierarchyView } from '../components/swap/SwapHierarchyView';
 import { getMaxLevel } from '../lib/maxLevelService';
 import { ChevronDown, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLevel } from '../contexts/LevelContext';
 
-export function ViewLevels() {
+export function ViewSwapLevels() {
   const [maxLevel, setMaxLevel] = useState(3);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -26,15 +26,15 @@ export function ViewLevels() {
     fetchMaxLevel();
   }, []);
 
-  const handleNavigateToSwap = () => {
-    navigate('/view-swap');
+  const handleNavigateToView = () => {
+    navigate('/view');
   };
 
   // ... rest of your existing code ...
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">View Levels</h1>
+      <h1 className="text-2xl font-bold mb-6">View Swap Levels</h1>
       
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-1">Select Level</label>
@@ -79,15 +79,19 @@ export function ViewLevels() {
         </div>
         <div className="flex justify-end mt-2">
           <button
-            onClick={handleNavigateToSwap}
+            onClick={handleNavigateToView}
             className="text-sm text-coral-600 hover:text-coral-700 font-medium"
           >
-            View swap level
+            View level
           </button>
         </div>
       </div>
 
-      <HierarchyView currentLevel={selectedLevel} />
+      <div className="text-lg font-semibold text-gray-500 mb-4">
+        Showing L{selectedLevel} to L{selectedLevel + 1} relationships
+      </div>
+
+      <SwapHierarchyView currentLevel={selectedLevel} />
     </div>
   );
 }
