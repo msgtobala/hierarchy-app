@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Level } from '../types';
 
@@ -22,16 +22,22 @@ export function useSwapLevelData(currentLevel: number) {
           (_, i) => i + 1
         );
 
-        await Promise.all(
-          levelsToFetch.map(async (level) => {
-            const snapshot = await getDocs(collection(db, `level${level}`));
-            levelData[level] = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data(),
-              level
-            })) as Level[];
-          })
+        // Fetch all levels in parallel
+        const levelSnapshots = await Promise.all(
+          levelsToFetch.map(level => 
+            getDocs(collection(db, `level${level}`))
+          )
         );
+
+        // Process snapshots
+        levelSnapshots.forEach((snapshot, index) => {
+          const level = levelsToFetch[index];
+          levelData[level] = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            level
+          })) as Level[];
+        });
 
         setLevelItems(levelData);
         setAvailableChildren(levelData[currentLevel + 1] || []);
@@ -59,7 +65,6 @@ export function useSwapLevelData(currentLevel: number) {
     fetchData();
   }, [currentLevel]);
 
-  // Rest of the code remains the same...
   const handleDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, `level${currentLevel}`, id));
@@ -72,21 +77,41 @@ export function useSwapLevelData(currentLevel: number) {
 
   const handleSaveEdit = async (levelId: string, newName: string, childIds: string[]) => {
     try {
+      const batch = writeBatch(db);
+
       // Update the current level's name
-      const docRef = doc(db, `level${currentLevel}`, levelId);
-      await updateDoc(docRef, { 
-        name: newName
-      });
+      const parentRef = doc(db, `level${currentLevel}`, levelId);
+      batch.update(parentRef, { name: newName });
 
-      // Update child levels to point to this parent
-      const childUpdates = childIds.map(childId => {
-        const childRef = doc(db, `level${currentLevel + 1}`, childId);
-        return updateDoc(childRef, {
-          parentIds: [levelId] // Set this as the only parent
-        });
-      });
+      // Get all current children for this level
+      const currentChildren = availableChildren.filter(child => 
+        child.parentIds?.includes(levelId)
+      );
 
-      await Promise.all(childUpdates);
+      // Update child levels
+      const nextLevelRef = collection(db, `level${currentLevel + 1}`);
+
+      // Remove this parent from children that are no longer selected
+      for (const child of currentChildren) {
+        if (!childIds.includes(child.id)) {
+          const childRef = doc(nextLevelRef, child.id);
+          const newParentIds = (child.parentIds || []).filter(id => id !== levelId);
+          batch.update(childRef, { parentIds: newParentIds });
+        }
+      }
+
+      // Add this parent to newly selected children
+      for (const childId of childIds) {
+        const child = availableChildren.find(c => c.id === childId);
+        if (child) {
+          const childRef = doc(nextLevelRef, childId);
+          const newParentIds = Array.from(new Set([...(child.parentIds || []), levelId]));
+          batch.update(childRef, { parentIds: newParentIds });
+        }
+      }
+
+      // Commit all changes
+      await batch.commit();
 
       // Update local state
       setGroupedLevels(prev =>

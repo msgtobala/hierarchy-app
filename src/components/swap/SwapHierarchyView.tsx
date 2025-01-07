@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Level } from '../../types';
-import { LevelFilters } from '../common/LevelFilters';
+import { SwapLevelFilters } from './SwapLevelFilters';
 import { EditSwapLevelModal } from './EditSwapLevelModal';
 import { DeleteModal } from '../common/DeleteModal';
 import { SwapLevelCard } from './SwapLevelCard';
@@ -32,26 +32,66 @@ export function SwapHierarchyView({ currentLevel }: SwapHierarchyViewProps) {
   const [deletingLevel, setDeletingLevel] = useState<Level | null>(null);
   const [noRecordsMessage, setNoRecordsMessage] = useState('');
 
+  // Reset filters when changing levels
+  useEffect(() => {
+    setSelectedLevelItems({});
+    setShowVerified(false);
+    setShowUnverified(false);
+    setSelectedOperation(null);
+  }, [currentLevel]);
+
   const filteredLevels = useMemo(() => {
-    let filtered = groupedLevels;
-    
-    if ((showVerified || showUnverified) && filtered.length > 0) {
+    let filtered = [...groupedLevels];
+
+    // Apply level filters
+    Object.entries(selectedLevelItems).forEach(([levelStr, selectedIds]) => {
+      const level = parseInt(levelStr);
+      if (selectedIds.length > 0) {
+        filtered = filtered.filter(item => {
+          if (level === currentLevel) {
+            return selectedIds.includes(item.id);
+          }
+          
+          // For previous levels, check the hierarchy
+          const findParentAtLevel = (currentItem: Level, targetLevel: number): boolean => {
+            if (currentItem.level === targetLevel) {
+              return selectedIds.includes(currentItem.id);
+            }
+            
+            if (!currentItem.parentIds?.length || currentItem.level <= targetLevel) {
+              return false;
+            }
+            
+            return currentItem.parentIds.some(parentId => {
+              const parent = levelItems[currentItem.level - 1]?.find(p => p.id === parentId);
+              return parent ? findParentAtLevel(parent, targetLevel) : false;
+            });
+          };
+          
+          return findParentAtLevel(item, level);
+        });
+      }
+    });
+
+    // Apply verification filters
+    if (showVerified || showUnverified) {
       filtered = filtered.filter(level => 
         (showVerified && level.isVerified) || (showUnverified && !level.isVerified)
       );
     }
 
+    // Apply set operations if selected
     if (selectedOperation && selectedLevelItems[currentLevel]?.length > 0) {
       const selectedNames = selectedLevelItems[currentLevel].map(id => 
         groupedLevels.find(item => item.id === id)?.name || ''
       ).filter(Boolean);
 
       filtered = filtered.filter(level => {
-        const levelChildNames = level.children.map(p => p.name);
+        const levelChildNames = level.children.map(child => child.name);
         return performSetOperation(selectedOperation, selectedNames, levelChildNames);
       });
     }
-    
+
     if (filtered.length === 0) {
       setNoRecordsMessage(
         showVerified ? 'No verified records found' :
@@ -61,24 +101,31 @@ export function SwapHierarchyView({ currentLevel }: SwapHierarchyViewProps) {
     } else {
       setNoRecordsMessage('');
     }
-    
-    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
-  }, [groupedLevels, showVerified, showUnverified, selectedLevelItems, currentLevel, selectedOperation]);
+
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
+  }, [groupedLevels, showVerified, showUnverified, selectedLevelItems, currentLevel, levelItems, selectedOperation]);
+
+  const handleLevelItemsChange = (level: number, items: string[]) => {
+    setSelectedLevelItems(prev => ({
+      ...prev,
+      [level]: items
+    }));
+  };
 
   return (
     <div>
       <div className="mb-6">
-        <LevelFilters
+        <SwapLevelFilters
           currentLevel={currentLevel}
           showVerified={showVerified}
           showUnverified={showUnverified}
           onVerifiedChange={setShowVerified}
           onUnverifiedChange={setShowUnverified}
+          levelItems={levelItems}
           selectedLevelItems={selectedLevelItems}
-          onLevelItemsChange={setSelectedLevelItems}
+          onLevelItemsChange={handleLevelItemsChange}
           selectedOperation={selectedOperation}
           onOperationChange={setSelectedOperation}
-          levels={Object.values(levelItems).flat()}
         />
       </div>
 
